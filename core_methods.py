@@ -6,23 +6,24 @@ import matplotlib.pyplot as plt
 def main(): #assumes data is already processed and all processed data is saved in "all_data_wc.csv"
     graphs = preprocessing.make_graphs("all_data_wc.csv")
 
-    graph = graphs[4]
+    graph = graphs[3]
 
     pos = initial_position(graph)
 
-    display_position(graph, pos)
+    display_position(graph, pos, True)
 
-    for i in range(20):
-
-        print(pos)
+    for i in range(50):
 
         moves = find_next_move(graph, pos)
 
-        move = moves[0]
+        print(f"~~~ {i}")
+        print("\n".join(str(i) for i in moves))
+        move, quality_matrix = moves[0]
+        print(move, quality_matrix)
 
         pos = make_next_move(pos, move)
 
-        display_position(graph, pos)
+        display_position(graph, pos, False)
 
     print()
 
@@ -48,7 +49,7 @@ def initial_position(graph):
 
     return (l_h, r_h, l_f, r_f) #(Left Hand, Right Hand, Left Foot, Right Foot) hold #'s
 
-def display_position(graph, position):
+def display_position(graph, position, show_connections):
 
     ## climb display
     x_coords = []; y_coords = []; labels = []; connections = []
@@ -59,9 +60,10 @@ def display_position(graph, position):
         r_text = str(hold)
         labels.append(r_text)
 
-        for n in graph["holds"][hold]["nbrs"]:
-            coords = graph["holds"][n[1]]["coords"]
-            connections.append(([x_coords[-1],coords[0]], [y_coords[-1], coords[1]]))
+        if show_connections:
+            for n in graph["holds"][hold]["nbrs"]:
+                coords = graph["holds"][n[1]]["coords"]
+                connections.append(([x_coords[-1],coords[0]], [y_coords[-1], coords[1]]))
 
     plt.figure(figsize=(4, 10)) #create the plot
 
@@ -109,63 +111,78 @@ def find_next_move(graph, position):
     moves = []
 
     weights = [0.7, 0.5] #strong_weight, dist_weight
-    max_quality = weights[0] + weights[1]*preprocessing.MAX_DIST # w/ height = 1.68, strong_weight + 0.84*dist_weight --> 1.42
+    max_quality = weights[0] + weights[1]*((10*preprocessing.MAX_DIST)**0.5) # w/ height = 1.68, strong_weight + 0.84*dist_weight --> 1.42
     for limb, limb_pos in enumerate(position):
         for distance, hold_to, theta in graph["holds"][limb_pos]["nbrs"]:
-            #print(limb_pos,"-->", hold_to)
+            print("\t", limb_pos,"-->", hold_to)
 
             strongest, strength = preprocessing.find_strength(graph["holds"][hold_to], theta)
 
-            distance = 0.5/((distance-0.5)**2+0.25)
-            strength = (10*strength)**(1/2)
+            distance = 0.5/((distance-0.5)**4+0.25)
+            strength = (strength)**(1/2)
 
             tbd_pos = make_next_move(position, (limb, limb_pos, hold_to))
-            if feet_too_far(graph, tbd_pos): quality = -1 #impossible
-            elif feet_over_hands(graph, tbd_pos): quality = -1 #impossible
-            else: quality = find_move_quality(position, limb_pos, hold_to, strength, distance, graph, weights)
+            if impossible(graph, tbd_pos): quality = -1; quality_matrix = [] #impossible
+            else: quality, quality_matrix = find_move_quality(position, limb, limb_pos, hold_to, strength, distance, graph, weights)
             
             
             #theoretically: min(quality) = 0, max(quality) = strong_weight + dist_wight*MAX_DIST
-            if quality > 0.5 * max_quality: moves.append((quality, distance, strength, (limb, limb_pos, hold_to))) # if quality meets threshold: add (quality, distance, (limb, hold_from, hold_to)) to moves 
+            if quality > 0.25 * max_quality: # if quality meets threshold
+                moves.append((quality, distance, strength, (limb, limb_pos, hold_to), quality_matrix)) #add (quality, distance, (limb, hold_from, hold_to)) to moves 
+                #print((limb, limb_pos, hold_to), quality_matrix)
+            else: print(f"qual too low {quality}")
+            print("\t", quality_matrix)
+            print()
 
     moves = sorted(moves, reverse=True)
     #print(moves[0])
     # sort moves #quality primary, distance secondary
-    moves = [i[3] for i in moves] # remove quality and distance from every hold in moves (only there to sort w/) 
+    moves = [i[3:] for i in moves] # remove quality and distance from every hold in moves (only there to sort w/) 
     return moves[:3] # return 5 best moves
 
-def feet_over_hands(graph, position):
-    hands = position[:2]
-    feet = position[-2:]
+def impossible(graph, position):
+    def feet_over_hands(graph, position):
+        hands = position[:2]
+        feet = position[-2:]
 
-    for hand in hands:
-        hand_y = graph["holds"][hand]["coords"][1]
-        for foot in feet:
-            if foot == 0: continue
-            foot_y = graph["holds"][foot]["coords"][1]
-            if foot_y > hand_y-1: return True
-    
-    return False
-            
+        print(hands, feet)
 
-def feet_too_far(graph, position):
-    hands = position[:2]
-    feet = position[-2:]
+        for hand in hands:
+            hand_y = graph["holds"][hand]["coords"][1]
+            for foot in feet:
+                if foot == 0: continue
+                foot_y = graph["holds"][foot]["coords"][1]
+                if foot_y > hand_y-0.66: print(f"f>h {foot_y}, {hand_y}"); return True
+        
+        return False
+                
 
-    for hand in hands:
-        hand = graph["holds"][hand]
-        for foot in feet:
-            foot = graph["holds"][foot]
-            eucl = find_distance(foot, hand)
-            if eucl > preprocessing.HEIGHT + 0.5: return True
+    def limbs_too_far(graph, position):
+        hands = position[:2]
+        feet = position[-2:]
 
-    if feet[0] != feet[1] and feet[0] != 0 and feet[1] != 0:
-        foot1 = graph["holds"][feet[0]]
-        foot2 = graph["holds"][feet[1]]
-        eucl = find_distance(foot1, foot2)
-        if eucl > preprocessing.HEIGHT/2: return True
+        for hand in hands:
+            hand = graph["holds"][hand]
+            for foot in feet:
+                foot = graph["holds"][foot]
+                eucl = find_distance(foot, hand)
+                if eucl > preprocessing.HEIGHT + 0.5: print("h&f too far"); return True
 
-    return False
+        if feet[0] != feet[1] and feet[0] != 0 and feet[1] != 0:
+            foot1 = graph["holds"][feet[0]]
+            foot2 = graph["holds"][feet[1]]
+            eucl = find_distance(foot1, foot2)
+            if eucl > preprocessing.HEIGHT/2: print("f&f too far"); return True
+
+        hand1 = graph["holds"][hands[0]]
+        hand2 = graph["holds"][hands[1]]
+        eucl = find_distance(hand1, hand2)
+        if eucl > preprocessing.HEIGHT*(3/4): print("h&h too far"); return True
+
+        return False
+    return limbs_too_far(graph, position) or feet_over_hands(graph, position)
+
+
 
 def find_distance(hold_from, hold_to):
     if "coords" not in hold_from:
@@ -175,19 +192,33 @@ def find_distance(hold_from, hold_to):
 
     return ((c1[0]-c2[0])**2 + (c1[1]-c2[1])**2)**(1/2)
 
-def find_move_quality(position, hold_from, hold_to, strength, distance, graph, weights):
+def find_move_quality(position, limb, hold_from, hold_to, strength, distance, graph, weights):
+
+    quality_matrix = []
     ## base quality
     strong_weight, dist_weight = weights #strength goes from 1-10, distance goes to preprocessing.MAX_DIST (1/2 height); usually around 0.75-0.9 meters
     quality = strong_weight*strength + dist_weight*distance
     quality = round(quality, 2) # quality = some function of distance and strength, rounded to nearest 0.1
+    quality_matrix.append(("base", quality))
+
+    if hold_from == 0: from_x, from_y = 0.5, 0
+    else: from_x, from_y = graph["holds"][hold_from]["coords"]
+    to_x, to_y = graph["holds"][hold_to]["coords"]
+
 
     ## modifiers
-    if graph["top"] == hold_to: quality += 1 #incentivize grabbing top / topping out
-    if hold_from == 0: quality += 10
-    if hold_from != 0 and graph["holds"][hold_to]["coords"][1] - graph["holds"][hold_from]["coords"][1] < 0: quality -= 2
-    if hold_to in position: quality -= 1
+    if hold_from == 0: quality += 10; quality_matrix.append(("off ground", 10)) #heavily incentivize taking foot off of ground
+    if graph["top"] == hold_to: quality += 1; quality_matrix.append(("top", 1)) #incentivize grabbing top / topping out
+    if hold_from != 0 and to_y < from_y: quality -= 2; quality_matrix.append(("down", -2))
+    if hold_to in position: quality -= 2/(10*(graph["holds"][hold_to]["size_x"])+1); quality_matrix.append(("match", -2/(10*(graph["holds"][hold_to]["size_x"])+1)))
 
-    return quality
+
+    if limb % 2 and to_x < from_x: quality += (to_x-from_x); quality_matrix.append(("r going l", float(to_x-from_x))) #if left limb and hold is to the left
+    elif not limb % 2 and to_x > from_x: quality += (from_x-to_x); quality_matrix.append(("l going r", float(from_x-to_x))) # if right limb and hold is to the right
+
+
+    quality_matrix.append(("final", quality))
+    return quality, quality_matrix
 
 
 def make_next_move(position, move): 
@@ -197,7 +228,7 @@ def make_next_move(position, move):
         print(f"invalid move! says limb {limb} is at position {hold_from} but is actually at {current_pos}")
 
     posn = (hold_to if idx == limb else elem for idx, elem in enumerate(position))
-    #position[:limb] + [hold_to] + position[limb+1:]
+
     return tuple(posn)
 
 def find_route(graph):

@@ -13,7 +13,7 @@ MIN_STRENGTH = 7.5 # strength score (immediate return)
 ABS_MIN_STRENGTH = 4.5 # strength score (won't ignore option)
 flatness_threshold = math.pi/3 #radians; theta max value to be considered 2d movement MORE THAN just vertical
 
-#image_path = r"H:\My Drive\Alwood-SeniorResearch\Code\Images"
+image_path = r"H:\My Drive\Alwood-SeniorResearch\Code\Images"
 #unprocessed_image_path = r"H:\My Drive\Alwood-SeniorResearch\Code\Images\do_processing"
 
 ## BEFORE PROCESSING ##
@@ -157,7 +157,7 @@ def create_graph(df, climb_label, climb_indices): #makes a graph for the climb w
 
     for i in set(climb_indices[climb_label]):
         hold_from = df.iloc[i]
-        graph["holds"][int(hold_from["Hold #"])] = { "regions":{ U:hold_from["Up Strength"], D:hold_from["Down Strength"], L:hold_from["Left Strength"], R:hold_from["Right Strength"] }, "coords": (hold_from["x"],hold_from["y"]), "nbrs":[] }
+        graph["holds"][int(hold_from["Hold #"])] = { "regions":{ U:hold_from["Up Strength"], D:hold_from["Down Strength"], L:hold_from["Left Strength"], R:hold_from["Right Strength"] }, "coords": (hold_from["x"],hold_from["y"]), "size_x":hold_from["size_x"], "size_y":hold_from["size_y"], "nbrs":[] }
         if hold_from["Start?"] == True: graph["start"].append(hold_from["Hold #"])
 
         if hold_from["y"] < MAX_DIST*0.66: graph["holds"][0]["nbrs"].append((hold_from["y"], int(hold_from["Hold #"]), math.pi/2))
@@ -232,3 +232,7 @@ def display_graph(graph): #uses matplotlib to display a graph
             # if distance is over maximum reach: continue
 
             #add hold2 (distance, j, theta) to i's nbrs in graph 
+
+
+
+#process_data(image_path)
