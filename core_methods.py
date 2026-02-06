@@ -110,7 +110,7 @@ def display_position(graph, position, show_connections):
 def find_next_move(graph, position):
     moves = []
 
-    weights = [0.7, 0.5] #strong_weight, dist_weight
+    weights = [0.7, 0.5, 0.8] #strong_weight, dist_weight, benefit and penalty weight
     max_quality = weights[0] + weights[1]*((10*preprocessing.MAX_DIST)**0.5) # w/ height = 1.68, strong_weight + 0.84*dist_weight --> 1.42
     for limb, limb_pos in enumerate(position):
         for distance, hold_to, theta in graph["holds"][limb_pos]["nbrs"]:
@@ -118,7 +118,7 @@ def find_next_move(graph, position):
 
             strongest, strength = preprocessing.find_strength(graph["holds"][hold_to], theta)
 
-            distance = 0.5/((distance-0.5)**4+0.25)
+            distance = 0.75/((distance-0.75)**6+0.25)
             strength = (strength)**(1/2)
 
             tbd_pos = make_next_move(position, (limb, limb_pos, hold_to))
@@ -166,7 +166,7 @@ def impossible(graph, position):
             for foot in feet:
                 foot = graph["holds"][foot]
                 eucl = find_distance(foot, hand)
-                if eucl > preprocessing.HEIGHT + 0.5: print("h&f too far"); return True
+                if eucl > preprocessing.HEIGHT + 0.4: print("h&f too far"); return True
 
         if feet[0] != feet[1] and feet[0] != 0 and feet[1] != 0:
             foot1 = graph["holds"][feet[0]]
@@ -196,10 +196,21 @@ def find_move_quality(position, limb, hold_from, hold_to, strength, distance, gr
 
     quality_matrix = []
     ## base quality
-    strong_weight, dist_weight = weights #strength goes from 1-10, distance goes to preprocessing.MAX_DIST (1/2 height); usually around 0.75-0.9 meters
+    strong_weight, dist_weight, bp_weight = weights #strength goes from 1-10, distance goes to preprocessing.MAX_DIST (1/2 height); usually around 0.75-0.9 meters
     quality = strong_weight*strength + dist_weight*distance
     quality = round(quality, 2) # quality = some function of distance and strength, rounded to nearest 0.1
     quality_matrix.append(("base", quality))
+
+    ben_and_pens, quality_matrix = ben_and_pen(quality_matrix, position, limb, hold_from, hold_to, graph)
+    ben_and_pens *= bp_weight
+    quality += ben_and_pens
+
+
+    quality_matrix.append(("final", quality))
+    return quality, quality_matrix
+
+def ben_and_pen(quality_matrix, position, limb, hold_from, hold_to, graph):
+    quality = 0
 
     if hold_from == 0: from_x, from_y = 0.5, 0
     else: from_x, from_y = graph["holds"][hold_from]["coords"]
@@ -216,10 +227,7 @@ def find_move_quality(position, limb, hold_from, hold_to, strength, distance, gr
     if limb % 2 and to_x < from_x: quality += (to_x-from_x); quality_matrix.append(("r going l", float(to_x-from_x))) #if left limb and hold is to the left
     elif not limb % 2 and to_x > from_x: quality += (from_x-to_x); quality_matrix.append(("l going r", float(from_x-to_x))) # if right limb and hold is to the right
 
-
-    quality_matrix.append(("final", quality))
     return quality, quality_matrix
-
 
 def make_next_move(position, move): 
     limb, hold_from, hold_to = move
