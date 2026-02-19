@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import image_processing
-import math
+import math, statistics
 import matplotlib.pyplot as plt
 
 U, R, D, L = "Up", "Right", "Down", "Left"
@@ -181,7 +181,11 @@ def create_graph(df, climb_label, climb_indices): #makes a graph for the climb w
             graph["holds"][int(hold_from["Hold #"])]["nbrs"].append((eucl_dist, int(hold_to["Hold #"]), theta)) # add tuple containing distance, the index of hold_to, and theta to "nbrs" dictionary for hold_from (of index i)
 
 
-    #display_graph(graph)
+    starts = graph["start"]
+    x_feet = statistics.mean([graph["holds"][hold]["coords"][0] for hold in starts])
+    
+    graph["holds"][0]["coords"] = (x_feet, 0)
+
     return graph
 
 def display_graph(graph): #uses matplotlib to display a graph 
