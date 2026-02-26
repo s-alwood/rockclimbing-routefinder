@@ -5,8 +5,21 @@ import matplotlib.pyplot as plt
 def main(): #assumes data is already processed and saved in "all_data_wc.csv"
     graphs = preprocessing.make_graphs("all_data_wc.csv") # make graphs
 
-    graph = graphs[4] # fetch graph
-    go_up(graph)
+
+    graph = graphs[0]
+    
+    route = find_route(graph)
+    describe_route(route)
+    show_route(graph, route)
+    
+
+    #alt_route = find_alternate_route(graph, (20, 21, 2, 6), [(3, 6, 7)])
+    #describe_route(alt_route)
+    #show_route(graph, alt_route)
+    
+    # for graph in graphs:
+    #     #graph = graphs[4] # fetch graph
+    #     go_up(graph)
 
 ## display
 def display_position(graph, position, show_connections): # shows graph using plt with hand/foot positions. show_connections (T) = edges are shown
@@ -102,8 +115,6 @@ def find_moves(graph, position): # returns 5 best moves found at given position
     max_base_quality = weights[0]*3 + weights[1]*((preprocessing.MAX_DIST)**0.5) # w/ height = 1.68, strong_weight + 0.84*dist_weight --> 1.42
     for limb, limb_pos in enumerate(position):
         for distance, hold_to, theta in graph["holds"][limb_pos]["nbrs"]:
-            print(limb_pos,"-->", hold_to) # print move being considered
-
             strongest, strength = preprocessing.find_strength(graph["holds"][hold_to], theta) # get chosen region
 
             distance = 0.75/(((distance-0.75)**6)+0.25) # transform (invert) distance
@@ -113,12 +124,13 @@ def find_moves(graph, position): # returns 5 best moves found at given position
             if impossible(graph, tbd_pos): quality = -1; quality_matrix = [] #impossible, never consider
             else: quality, quality_matrix = find_move_quality(position, limb, limb_pos, hold_to, strength, distance, graph, weights) # if not impossible, find the quality
             
-
+            considered = False
             if quality > 0.5 * max_base_quality: # if quality meets threshold
-                moves.append((quality, distance, strength, (limb, limb_pos, hold_to), quality_matrix)) #add (quality, distance, (limb, hold_from, hold_to)) to moves 
-            else: print(f"qual too low {quality}") # otherwise move too poor to consider
+                moves.append((quality, distance, strength, (limb, limb_pos, hold_to), quality_matrix)) #add (quality, distance, (limb, hold_from, hold_to)) to moves
+                considered = True
+            #else: print(f"qual too low {quality}") # otherwise move too poor to consider
 
-            print("\t", strength, distance, quality_matrix) # print information about the move
+            print(limb_pos,"-->", hold_to, f"{considered}\t",quality_matrix) # print information about the move
             print()
 
     moves = sorted(moves, reverse=True)
@@ -192,13 +204,13 @@ def impossible(graph, position): # returns T if a move is impossible (feet less 
             foot1 = graph["holds"][feet[0]]
             foot2 = graph["holds"][feet[1]]
             eucl = find_distance(foot1, foot2)
-            if eucl > 2*preprocessing.HEIGHT/3: print("f&f too far"); return True # if they're more than height * 0.66 apart, impossible
+            if eucl > preprocessing.HEIGHT*0.75: print("f&f too far"); return True # if they're more than height * 0.66 apart, impossible
 
         ## check hands
         hand1 = graph["holds"][hands[0]]
         hand2 = graph["holds"][hands[1]]
         eucl = find_distance(hand1, hand2)
-        if eucl > preprocessing.HEIGHT*(3/4): print("h&h too far"); return True # if they're more than height * 0.75 apart, impossible
+        if eucl > preprocessing.HEIGHT*0.7: print("h&h too far"); return True # if they're more than height * 0.75 apart, impossible
 
         return False #if none were impossible
     
@@ -218,31 +230,24 @@ def ben_and_pen(quality_matrix, position, limb, hold_from, hold_to, graph): # ap
     if hold_to in position: quality -= 2/(10*(graph["holds"][hold_to]["size_x"])+1); quality_matrix.append(("match", -2/(10*(graph["holds"][hold_to]["size_x"])+1))) #max penalty 2 @ size = 0. avg penalty (based on data as of 2/6/26) ~ 1
 
 
+    tbd_pos = make_move(position, (limb, hold_from, hold_to))
     #check if right limb is further right than left counterpart
     if limb % 2 == 0: # left 
         l_x, l_y = to_x, to_y
-        r_x, r_y = graph["holds"][position[limb+1]]["coords"]
+        r_x, r_y = graph["holds"][tbd_pos[limb+1]]["coords"]
 
     else: #right 
         r_x, r_y = to_x, to_y
-        l_x, l_y = graph["holds"][position[limb-1]]["coords"]
+        l_x, l_y = graph["holds"][tbd_pos[limb-1]]["coords"]
 
-    if l_x > r_x: quality -= (l_x-r_x)*abs(l_y-r_y)*10; quality_matrix.append(("left more right than right", -(l_x-r_x)*abs(l_y-r_y)*10)) # subtract 10 * dx * dy from quality (more penalty if further apart)
+    if l_x > r_x: quality -= (l_x-r_x)*5; quality_matrix.append(("left more right than right", -(l_x-r_x)*5)) # subtract 10 * dx * dy from quality (more penalty if further apart)
+
+    hand_x = (graph["holds"][tbd_pos[0]]["coords"][0] + graph["holds"][tbd_pos[1]]["coords"][0])/2
+    foot_x = (graph["holds"][tbd_pos[2]]["coords"][0] + graph["holds"][tbd_pos[3]]["coords"][0])/2
+
+    quality -= (1.5*abs(hand_x-foot_x))**2; quality_matrix.append(("unbalanced", 0.5*(abs(hand_x-foot_x)**2)))
 
     return quality, quality_matrix
-
-## interpretation aide
-def interpret_move(move): # returns a readable string describing move
-    limb, hold_f, hold_t = move #unpack move
-    limb = {0:"left hand", 1:"right hand", 2:"left foot", 3:"right foot"}[limb] #interpret limb
-
-    if hold_f == 0: hold_f = "ground" #interpret hold going from
-    else: hold_f = f"hold {hold_f}"
-
-    return f"{limb} from {hold_f} to hold {hold_t}" #return string
-
-def encode_move(move_str): #UNFINISHED takes a string of format "[limb] from [hold [#]/ground] to hold [#]" and turns it into (limb, hold_from, hold_to)
-    return ()
 
 # whole or partial routefinding
 def go_up(graph): # navigates climb from start; displays at each step
@@ -275,27 +280,100 @@ def find_route(graph): # navigates climb from start; returns route of form [init
 
 def find_partial_route(graph, pos): # navigates climb starting at a given position; returns route of form [initial_pos, move1, move2...moveN]
     route = [pos]
+    fatigue = [0, 0, 0, 0]
 
     while not(pos[0] == pos[1] == graph["top"]): #while not topped out
 
         moves = find_moves(graph, pos) # find moves
 
-        move, quality_matrix = moves[0] #always pick best move
+        adjusted_moves = []
+        last_move = route[-1]
 
+        if len(last_move) == 3:
+            last_limb = last_move[0]
+            fatigue[last_limb] += 0.1
+
+            for move, quality_matrix in moves: # move is form (limb, from, to)
+                quality = quality_matrix[-1][-1]
+                if move[0] == last_limb:
+                    quality -= 1
+                adjusted_moves.append((quality-fatigue[move[0]], move))
+        else: 
+            for move, quality_matrix in moves:
+                quality = quality_matrix[-1][-1]
+                adjusted_moves.append((quality-fatigue[move[0]], move))
+
+        adjusted_moves.sort(reverse = True)
+
+        quality, move = adjusted_moves[0] #always pick best move
         route.append(move)
 
         pos = make_move(pos, move) #update position
 
+    #print(fatigue)
+    return route
+
 def find_alternate_route(graph, position, tried_moves): #UNFINISHED return route starting position having already tried some number of moves from position
     position = make_move(position, find_alternate_move(graph, position, tried_moves))
-    return ()
+
+    route = find_partial_route(graph, position)
+    return route
 
 def find_alternate_move(graph, position, tried_moves): #UNFINISHED return next move having already tried some number of moves from position
     possible_moves = find_moves(graph, position)
-    moves = set(possible_moves) - tried_moves
+    moves = [m for m, quality_matrix in possible_moves if not m in tried_moves]
     return moves[0]
 
-def show_route(route): #UNFINISHED display each step of a given route of form [initial_pos, move1, move2...moveN]
+## interpretability
+
+def interpret_move(move): # returns a readable string describing move
+    limb, hold_f, hold_t = move #unpack move
+    limb = {0:"left hand", 1:"right hand", 2:"left foot", 3:"right foot"}[limb] #interpret limb
+
+    if hold_f == 0: hold_f = "ground" #interpret hold going from
+    else: hold_f = f"hold {hold_f}"
+
+    return f"{limb} from {hold_f} to hold {hold_t}" #return string
+
+def encode_move(move_str): #UNFINISHED takes a string of format "[limb] from [hold [#]/ground] to hold [#]" and turns it into (limb, hold_from, hold_to)
+    words = move_str.split(" ")
+
+    words = [w for w in words if w not in ["from", "hold", "to"]]
+
+    #l_h = 0, r_h = 1, l_f = 2, r_f = 3
+    limb_ls = words[:2]
+    limb = 0
+    if "foot" in limb_ls: limb += 2
+    if "right" in limb_ls: limb += 1
+
+    if "ground" in words: hold_from = 0
+    else: hold_from = int(words[-2])
+
+    hold_to = int(words[-1])
+    return (limb, hold_from, hold_to)
+
+def interpret_position(pos):
+    return f"left hand @ hold {pos[0]} / right hand @ hold {pos[1]} / left foot {f"@ hold{pos[2]}" if pos[2] != 0 else "on ground"} / right foot {f"@ hold{pos[3]}" if pos[3] != 0 else "on ground"}"
+
+def show_route(graph, route): #UNFINISHED display each step of a given route of form [initial_pos, move1, move2...moveN]
+    
+    pos = route[0]
+    display_position(graph, pos, True)
+
+    for move in route[1:]:
+        pos = make_move(pos, move)
+        display_position(graph, pos, False)
     return
     
+def describe_route(route):
+
+    print(f"starting: {interpret_position(route[0])}")
+    pos = route[0]
+
+    for i, move in enumerate(route[1:]):
+        pos = make_move(pos, move)
+        print(i, ":", interpret_move(move), f"  [ {pos} ]")
+    print("top")
+
+
 main()

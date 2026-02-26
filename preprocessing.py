@@ -9,7 +9,7 @@ U, R, D, L = "Up", "Right", "Down", "Left"
 HEIGHT = 1.68 #meters
 
 MAX_DIST = HEIGHT/2 #meters
-MIN_STRENGTH = 7.5 # strength score (immediate return)
+MIN_STRENGTH = 5 # strength score (immediate return)
 ABS_MIN_STRENGTH = 4.5 # strength score (won't ignore option)
 flatness_threshold = math.pi/3 #radians; theta max value to be considered 2d movement MORE THAN just vertical
 
@@ -213,30 +213,3 @@ def display_graph(graph): #uses matplotlib to display a graph
     plt.title(f"{graph["name"][0]} taken on {graph["name"][1]}")
     plt.grid(True)
     plt.show()
-
-## UNUSED CODE (for future reference) ##
-            #print(i, j, eucl_dist)
-            # direction, strength = find_strength(hold_to, theta)
-            # strength_normalized = strength / 10
-            # if strength < ABS_MIN_STRENGTH: break
-
-            # dist_weight, strength_weight = -1, 1 #want high weight --> further is bad, stronger is good
-            # weight = (eucl_dist*dist_weight) + (strength_normalized*strength_weight) 
-
-           # if 
-
-
-    # for i, hold_from in enumerate(climb):
-        #graph["holds"][i] = { regions:{ U:#, D:#, L:#, R:# }, coordinates: (x,y), nbrs:{ name:weight } }
-        # for j, hold_to in enumerate(climb-hold_from)
-            # calculate dx, dy, and euclidean distance
-            # theta = arctangent(dy/dx)
-
-            # if dy is more than a little negative (going down): continue
-            # if distance is over maximum reach: continue
-
-            #add hold2 (distance, j, theta) to i's nbrs in graph 
-
-
-
-#process_data(image_path)
