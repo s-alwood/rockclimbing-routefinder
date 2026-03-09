@@ -2,8 +2,6 @@ import preprocessing
 import matplotlib.pyplot as plt
 import csv
 
-#all_qualities = [["s", "d", "bp"]]
-
 ## main
 def main(): #assumes data is already processed and saved in "all_data_wc.csv"
     graphs = preprocessing.make_graphs("all_data_wc.csv") # make graphs
