@@ -1,4 +1,5 @@
 import core_methods as cm
+import preprocessing as prp
 
 
 ## attempt 1
@@ -43,9 +44,37 @@ def min_len_items(ls):
 
 ## attempt 2
 
-def route_aware_fnm(num_moves):
-    ini
-    return ""
+def route_aware_fnm(graph, num_moves, pos=()):
+    if not pos: pos = cm.initial_position(graph) #if not given a position, set it to initial position
 
-def rec_route_aware_fnm(num_moves): #return quality of best path
-    return 0
+    moves = cm.find_moves(graph, pos)
+    qualities = []
+
+    for move, quality_matrix in moves:
+        qual = quality_matrix[-1][-1]
+
+        potential_pos = cm.make_move(pos, move)
+        qualities.append((qual +rec_route_aware_fnm(graph, potential_pos, num_moves-1), move))
+
+    print(qualities)
+    return max(qualities)[-1]
+
+def rec_route_aware_fnm(graph, pos, num_moves): #return quality of best path
+    if num_moves == 0: return 0 #if we're past the # of moves we want to check, don't add to quality
+
+    moves = cm.find_moves(graph, pos)
+    qualities = [-100]
+    level_iters[num_moves] += 1; print(level_iters)
+    for move, quality_matrix in moves:
+        qual = quality_matrix[-1][-1]
+
+        potential_pos = cm.make_move(pos, move)
+        qualities.append(qual +rec_route_aware_fnm(graph, potential_pos, num_moves-1))
+
+    return max(qualities)
+
+
+graphs = prp.make_graphs("all_data_wc.csv")
+graph = graphs[4]
+
+print(route_aware_fnm(graph, 10))

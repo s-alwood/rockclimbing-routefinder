@@ -239,7 +239,7 @@ def ben_and_pen(quality_matrix, position, limb, hold_from, hold_to, graph): # ap
     to_x, to_y = graph["holds"][hold_to]["coords"]
 
     importance = [
-        20, 2, 2, 2, #off ground, top, down, match; default = 20, 2, 2, 2
+        20, 4, 2, 2, #off ground, top, down, match; default = 20, 2, 2, 2
         8, #left more right than right; default = 8
         0.5, #hands or feet too different y; default = 0.5
         5, #unbalance; default = 3
@@ -315,7 +315,7 @@ def ben_and_pen(quality_matrix, position, limb, hold_from, hold_to, graph): # ap
     
     overextended = [extensions[i] > 1 for i in range(6)]
     
-    if any(overextended): print("overextended", extensions); return -100, []
+    if any(overextended): return -100, []
     else: 
         quality -= (m:= importance[6] * sum([10.67*((a-0.5)**6) for a in extensions]))
         quality_matrix.append(("extension", [float(round(i, 2)) for i in extensions], -m))
