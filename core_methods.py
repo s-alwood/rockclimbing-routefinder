@@ -3,13 +3,12 @@ import matplotlib.pyplot as plt
 import csv
 
 #all_qualities = [["s", "d", "bp"]]
-level_iters = [0 for i in range(25)]
+
 ## main
 def main(): #assumes data is already processed and saved in "all_data_wc.csv"
     graphs = preprocessing.make_graphs("all_data_wc.csv") # make graphs
 
     graph = graphs[4]
-    explore_routes(graph)
 
 
     # for graph in graphs:
@@ -404,41 +403,6 @@ def find_alternate_move(graph, position, tried_moves): #UNFINISHED return next m
     moves = [m for m, quality_matrix in possible_moves if not m in tried_moves]
     return moves[0]
 
-def explore_routes(graph):
-    pos = initial_position(graph)
-    routes = recursive_explore(graph, pos, 0, False)
-    print(routes)
-    
-def recursive_explore(graph, pos, level, stop):
-    if pos[0] == pos[1] and pos [0] == graph["top"]: return "top"
-    if stop: return []
-    moves = [m[0] for m in find_moves(graph, pos)[:2]]
-    routes = []
-    for move in moves:
-        #print(move)
-        p_pos = make_move(pos, move)
-        r = recursive_explore(graph, p_pos, level + 1, stop)
-        if not r: continue
-        if r == "top": return [move, r]
-        if "top" in r: stop = True
-        #print([move]+[i for i in (r[0] if len(r) == 1 else r)])
-        routes.append([move]+[i for i in (r[0] if len(r) == 1 else r)])
-    level_iters[level] += 1; print(level_iters)
-    return min_len_items(routes)
-
-def min_len_items(ls):
-    if not ls: return ls
-    shortest, ln = ls[0], len(ls[0])
-
-    short = []
-    for i in ls:
-        if not i: continue
-        if (l:=len(i)) < ln:
-            shortest = i; ln = l
-            short = [i]
-
-        if l == ln: short.append(i)
-    return short
 ## interpretability
 
 def interpret_move(move): # returns a readable string describing move
