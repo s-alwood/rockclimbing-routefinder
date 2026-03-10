@@ -1,5 +1,6 @@
 import core_methods as cm
 import preprocessing as prp
+import csv
 
 
 ## attempt 1
@@ -44,37 +45,64 @@ def min_len_items(ls):
 
 ## attempt 2
 
-def route_aware_fnm(graph, num_moves, pos=()):
+def route_aware_fnm(graph, depth, pos=()):
     if not pos: pos = cm.initial_position(graph) #if not given a position, set it to initial position
 
     moves = cm.find_moves(graph, pos)
-    qualities = []
+    qualities = [(0, "impossible")]
 
     for move, quality_matrix in moves:
         qual = quality_matrix[-1][-1]
 
         potential_pos = cm.make_move(pos, move)
-        qualities.append((qual +rec_route_aware_fnm(graph, potential_pos, num_moves-1), move))
+        qualities.append((qual +rec_route_aware_fnm(graph, potential_pos, depth-1), move))
 
-    print(qualities)
+    #print(qualities)
+
+
     return max(qualities)[-1]
 
-def rec_route_aware_fnm(graph, pos, num_moves): #return quality of best path
-    if num_moves == 0: return 0 #if we're past the # of moves we want to check, don't add to quality
+def rec_route_aware_fnm(graph, pos, depth): #return quality of best path
+    if depth == 0: return 0 #if we're past the # of moves we want to check, don't add to quality
 
     moves = cm.find_moves(graph, pos)
     qualities = [-100]
-    level_iters[num_moves] += 1; print(level_iters)
+    boost = 0
+    level_iters[depth] += 1#; print(level_iters)
     for move, quality_matrix in moves:
         qual = quality_matrix[-1][-1]
 
         potential_pos = cm.make_move(pos, move)
-        qualities.append(qual +rec_route_aware_fnm(graph, potential_pos, num_moves-1))
+
+        if potential_pos[0] == potential_pos[1] and potential_pos[0] == graph["top"]: boost = 5*depth; depth = 1 #if topping out on this move, boost path for being shorter and don't look further
+        qualities.append(boost + qual +rec_route_aware_fnm(graph, potential_pos, depth-1))
+        #cm.all_qualities.append([qualities[-1]])
 
     return max(qualities)
 
+def route_aware_find_route(graph, depth, pos = ()):
+    if not pos: pos = cm.initial_position(graph)
+
+    route = [pos]
+    move_num = 1
+    while not (pos[0] == pos[1] and pos[0] == graph["top"]):
+        #print(move_num)
+        move = route_aware_fnm(graph, depth, pos)
+        route.append(move)
+        pos = cm.make_move(pos, move)
+        print(move)
+
+    return route
+
+
 
 graphs = prp.make_graphs("all_data_wc.csv")
-graph = graphs[4]
 
-print(route_aware_fnm(graph, 10))
+for graph in graphs:
+    route = route_aware_find_route(graph, 5)
+    print(route)
+    cm.describe_route(route)
+
+# with open("qualitydata.csv", mode='w', newline='') as file:
+#         writer = csv.writer(file)
+#         writer.writerows(cm.all_qualities)

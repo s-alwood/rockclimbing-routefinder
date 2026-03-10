@@ -3,10 +3,14 @@ import matplotlib.pyplot as plt
 import csv
 
 ## main
+all_qualities = []
 def main(): #assumes data is already processed and saved in "all_data_wc.csv"
     graphs = preprocessing.make_graphs("all_data_wc.csv") # make graphs
 
     graph = graphs[4]
+    route = find_route(graph)
+    # describe_route(route)
+    describe_route(graph, route)
 
 
     # for graph in graphs:
@@ -16,9 +20,7 @@ def main(): #assumes data is already processed and saved in "all_data_wc.csv"
     # filename = 'qualdata.csv'
 
     # # Open the file in write mode ('w') with newline='' for proper CSV handling
-    # with open(filename, mode='w', newline='') as file:
-    #     writer = csv.writer(file)
-    #     writer.writerows(all_qualities)
+    # 
 
 
 ## display
@@ -129,7 +131,7 @@ def find_moves(graph, position): # returns 5 best moves found at given position
             else: quality, quality_matrix = find_move_quality(position, limb, limb_pos, hold_to, strength, distance, graph, weights) # if not impossible, find the quality
             
             considered = False
-            if quality > 2 :#0.25 * max_base_quality: # if quality meets threshold
+            if quality > 0 :#0.25 * max_base_quality: # if quality meets threshold
                 moves.append((quality, distance, strength, (limb, limb_pos, hold_to), quality_matrix)) #add (quality, distance, (limb, hold_from, hold_to)) to moves
                 considered = True
             #else: print(f"qual too low {quality}") # otherwise move too poor to consider
@@ -239,11 +241,11 @@ def ben_and_pen(quality_matrix, position, limb, hold_from, hold_to, graph): # ap
     to_x, to_y = graph["holds"][hold_to]["coords"]
 
     importance = [
-        20, 4, 2, 2, #off ground, top, down, match; default = 20, 2, 2, 2
+        20, 4, 10, 2, #off ground, top, down, match; default = 20, 2, 2, 2
         8, #left more right than right; default = 8
         0.5, #hands or feet too different y; default = 0.5
         5, #unbalance; default = 3
-        1.5 #overtextension; default = 1.5
+        3 #overtextension; default = 1.5
 
     ]
 
@@ -433,7 +435,9 @@ def interpret_position(pos):
     return f"left hand @ hold {pos[0]} / right hand @ hold {pos[1]} / left foot {f"@ hold{pos[2]}" if pos[2] != 0 else "on ground"} / right foot {f"@ hold{pos[3]}" if pos[3] != 0 else "on ground"}"
 
 def show_route(graph, route): #UNFINISHED display each step of a given route of form [initial_pos, move1, move2...moveN]
-    
+    if route == "impossible": print(route); return
+
+
     pos = route[0]
     display_position(graph, pos, True)
 
@@ -444,6 +448,8 @@ def show_route(graph, route): #UNFINISHED display each step of a given route of 
     
 def describe_route(route):
 
+    if route == "impossible": print(route); return
+
     print(f"starting: {interpret_position(route[0])}")
     pos = route[0]
 
@@ -453,4 +459,4 @@ def describe_route(route):
     print("top")
 
 
-main()
+#main()
