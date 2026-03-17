@@ -116,14 +116,14 @@ def dist_w_coords(h1, h2):
 def find_moves(graph, position): # returns 5 best moves found at given position
     moves = []
 
-    weights = [0.7, 0.5, 0.7] #strong_weight, dist_weight, benefit and penalty weight
+    weights = [0.7, 0.7, 0.7] #strong_weight, dist_weight, benefit and penalty weight; defaults = 0.7, 0.5, 0.7
     max_base_quality = weights[0]*3 + weights[1]*((preprocessing.MAX_DIST)**0.5) # w/ height = 1.68, strong_weight + 0.84*dist_weight --> 1.42
     for limb, limb_pos in enumerate(position):
         for distance, hold_to, theta in graph["holds"][limb_pos]["nbrs"]:
             strongest, strength = preprocessing.find_strength(graph["holds"][hold_to], theta) # get chosen region
 
             if limb < 1: strength += 1.5
-            distance = 0.75/(((distance-(preprocessing.HEIGHT/4))**4)+0.25) # transform (invert) distance
+            distance = 0.75/(((distance-(preprocessing.HEIGHT*0.60))**4)+0.25) # transform (invert) distance
             strength = (strength)**(1/2) # transform strength
 
             tbd_pos = make_move(position, (limb, limb_pos, hold_to))
@@ -215,7 +215,7 @@ def impossible(graph, position): # returns T if a move is impossible (feet less 
             for foot in feet: #for each foot
                 foot = graph["holds"][foot] #get its attributes
                 eucl = find_distance(foot, hand) #find their distance
-                if eucl > preprocessing.HEIGHT*1.25: return True # if they're more than height * 1.3 apart, impossible
+                if eucl > preprocessing.HEIGHT*1.2: return True # if they're more than height * 1.3 apart, impossible
 
         ## check feet
         if feet[0] != feet[1] and feet[0] != 0 and feet[1] != 0:
@@ -241,8 +241,8 @@ def ben_and_pen(quality_matrix, position, limb, hold_from, hold_to, graph): # ap
     to_x, to_y = graph["holds"][hold_to]["coords"]
 
     importance = [
-        20, 4, 10, 2, #off ground, top, down, match; default = 20, 2, 2, 2
-        8, #left more right than right; default = 8
+        20, 5, 10, 2, #off ground, top, down, match; default = 20, 2, 2, 2
+        6, #left more right than right; default = 8
         0.5, #hands or feet too different y; default = 0.5
         5, #unbalance; default = 3
         3 #overtextension; default = 1.5
@@ -301,19 +301,20 @@ def ben_and_pen(quality_matrix, position, limb, hold_from, hold_to, graph): # ap
     left_hand, right_hand, left_foot, right_foot = tbd_limb_coords
     extensions = []
     h = preprocessing.HEIGHT
-    thresholds = [h*1.33, h*1.33, h*1.25, h*1.25, h*0.75, h*0.7]
+    thresholds = [h*1.15,   h*1.1,   h*0.75,  h*0.7] #def 1.33 1.25 .75 .7
+    #             opp_hf same_hf  lh_rh   rf_lf
 
         #opposite hf pairs
     extensions.append(dist_w_coords(left_hand, right_foot) / thresholds[0])
-    extensions.append(dist_w_coords(right_hand, left_foot) / thresholds[1])
+    extensions.append(dist_w_coords(right_hand, left_foot) / thresholds[0])
 
         #matching hf pairs
-    extensions.append(dist_w_coords(left_hand, left_foot) / thresholds[2])
-    extensions.append(dist_w_coords(right_hand, right_foot) / thresholds[3])
+    extensions.append(dist_w_coords(left_hand, left_foot) / thresholds[1])
+    extensions.append(dist_w_coords(right_hand, right_foot) / thresholds[1])
 
         #hands & feet
-    extensions.append(dist_w_coords(left_hand, right_hand) / thresholds[4])
-    extensions.append(dist_w_coords(right_foot, left_foot) / thresholds[5])
+    extensions.append(dist_w_coords(left_hand, right_hand) / thresholds[2])
+    extensions.append(dist_w_coords(right_foot, left_foot) / thresholds[3])
     
     overextended = [extensions[i] > 1 for i in range(6)]
     
@@ -322,6 +323,7 @@ def ben_and_pen(quality_matrix, position, limb, hold_from, hold_to, graph): # ap
         quality -= (m:= importance[6] * sum([10.67*((a-0.5)**6) for a in extensions]))
         quality_matrix.append(("extension", [float(round(i, 2)) for i in extensions], -m))
     #else: quality -= (1/3**4)*(sum(extensions)-3)**6; quality_matrix.append(("extension", [float(round(i, 2)) for i in extensions], -(1/2**4)*(sum(extensions)-2)**6))
+
 
 
     return quality, quality_matrix

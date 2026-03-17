@@ -53,9 +53,16 @@ def route_aware_fnm(graph, depth, pos=()):
 
     for move, quality_matrix in moves:
         qual = quality_matrix[-1][-1]
+        boost = 0
 
         potential_pos = cm.make_move(pos, move)
-        qualities.append((qual +rec_route_aware_fnm(graph, potential_pos, depth-1), move))
+        path_segment_quality = rec_route_aware_fnm(graph, potential_pos, depth-1)
+
+        if move[1] == 0: boost += 20
+
+        qualities.append((qual + path_segment_quality + boost, move))
+
+        #print(move, qualities[-1])
 
     #print(qualities)
 
@@ -70,13 +77,18 @@ def rec_route_aware_fnm(graph, pos, depth): #return quality of best path
     boost = 0
     level_iters[depth] += 1#; print(level_iters)
     for move, quality_matrix in moves:
+        
         qual = quality_matrix[-1][-1]
 
         potential_pos = cm.make_move(pos, move)
 
-        if potential_pos[0] == potential_pos[1] and potential_pos[0] == graph["top"]: boost = 5*depth; depth = 1 #if topping out on this move, boost path for being shorter and don't look further
-        qualities.append(boost + qual +rec_route_aware_fnm(graph, potential_pos, depth-1))
-        #cm.all_qualities.append([qualities[-1]])
+        if pos[0] == pos[1] and pos[0] == graph["top"]: boost = 20
+        if potential_pos[0] == potential_pos[1] and potential_pos[0] == graph["top"]: boost += 5*depth; depth = 1 #if topping out on this move, boost path for being shorter and don't look further
+        
+        #if boost != 0: print(boost, potential_pos, depth)
+        path_segment_quality = rec_route_aware_fnm(graph, potential_pos, depth-1)
+        qualities.append(boost + qual + path_segment_quality)
+        #cm.all_qualities.append([graph["name"], qualities[-1]])
 
     return max(qualities)
 
@@ -90,18 +102,16 @@ def route_aware_find_route(graph, depth, pos = ()):
         move = route_aware_fnm(graph, depth, pos)
         route.append(move)
         pos = cm.make_move(pos, move)
-        print(move)
+        #print(move)
 
     return route
 
-
-
 graphs = prp.make_graphs("all_data_wc.csv")
 
-for graph in graphs:
-    route = route_aware_find_route(graph, 5)
-    print(route)
-    cm.describe_route(route)
+graph = graphs[0]
+route = route_aware_find_route(graph, 5)
+cm.describe_route(route)
+cm.show_route(graph, route)
 
 # with open("qualitydata.csv", mode='w', newline='') as file:
 #         writer = csv.writer(file)
