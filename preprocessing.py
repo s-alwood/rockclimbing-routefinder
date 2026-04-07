@@ -3,13 +3,17 @@ import numpy as np
 import image_processing
 import math, statistics
 import matplotlib.pyplot as plt
+import random
 
 U, R, D, L = "Up", "Right", "Down", "Left"
+swaps = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+kinda_swaps = [0, 0, 0] #01, 12, 23
+
 
 HEIGHT = 1.68 #meters
 
 MAX_DIST = HEIGHT/2 #meters
-MIN_STRENGTH = 5 # strength score (immediate return)
+MIN_STRENGTH = 6 # strength score (immediate return)
 ABS_MIN_STRENGTH = 4.5 # strength score (won't ignore option)
 flatness_threshold = math.pi/3 #radians; theta max value to be considered 2d movement MORE THAN just vertical
 
@@ -111,12 +115,45 @@ def find_distance(hold_from, hold_to): #finds distance between two holds
 
         return dx, dy, math.sqrt((dx**2)+(dy**2))
 
-def find_strength(hold_to, theta): #finds strength of a destination hold (region based on theta)
+def find_strength(hold_to, theta, randomizer): #finds strength of a destination hold (region based on theta)
+    def swap(prio, i1, i2):
+        prio[i1], prio[i2] = prio[i2], prio[i1]
+        return prio
+    
+    if 0 < theta < flatness_threshold: 
+        prio = [U, R, D, L] # dx was pos, not obtuse enough to be up/down first
+    elif 0 > theta > -flatness_threshold: 
+        prio = [U, L, D, R] #dx was neg, not obtuse enough to be up/down first
+    elif theta > 0: 
+        prio = [U, D, R, L] #dx was pos, obtuse enough to be up/down first
+    else: 
+        prio = [U, D, L, R] #dx was neg, obtuse enough to be up/down first
 
-    if 0 < theta < flatness_threshold: prio = [U, R, D, L] # dx was pos, not obtuse enough to be up/down first
-    elif 0 > theta > -flatness_threshold: prio = [U, L, D, R] #dx was neg, not obtuse enough to be up/down first
-    elif theta > 0: prio = [U, D, R, L] #dx was pos, obtuse enough to be up/down first
-    else: prio = [U, D, L, R] #dx was neg, obtuse enough to be up/down first
+    random.seed(randomizer)
+    swap_counter = 0
+
+    randomness_threshold = .05
+    while (th:=random.random()) < randomness_threshold: #adding randomness to priority
+        swap_counter += 1
+        #print("random indecision", th)
+        if th < 0.5 * randomness_threshold:
+            swap(prio, 0, 1)
+            kinda_swaps[0] += 1
+            #print(0, 1)
+        elif th < 0.75*randomness_threshold:
+            swap(prio, 1, 2)
+            kinda_swaps[1] += 1
+            #print(1, 2)
+        else: 
+            swap(prio, 2, 3)
+            kinda_swaps[2] += 1
+            #print(2, 3)
+
+        #randomness_threshold -= 0.01
+
+    #print(kinda_swaps)
+    #swaps[swap_counter] += 1
+    #if swap_counter > 1: print(prio)
 
     strongest = ""
     strength = -1
@@ -213,3 +250,6 @@ def display_graph(graph): #uses matplotlib to display a graph
     plt.title(f"{graph["name"][0]} taken on {graph["name"][1]}")
     plt.grid(True)
     plt.show()
+
+# graphs = make_graphs("all_data_wc.csv")
+# display_graph(graphs[4])
