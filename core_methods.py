@@ -114,7 +114,7 @@ def dist_w_coords(h1, h2):
     return sum([(h1[i]-h2[i])**2 for i in range(2)])**0.5
 
 ## individual moves
-def find_moves(graph, position, randomness): # returns 5 best moves found at given position
+def find_moves(graph, position, randomness=12): # returns 5 best moves found at given position
     moves = []
 
     weights = [0.7, 0.7, 0.7] #strong_weight, dist_weight, benefit and penalty weight; defaults = 0.7, 0.5, 0.7

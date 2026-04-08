@@ -115,7 +115,7 @@ def find_distance(hold_from, hold_to): #finds distance between two holds
 
         return dx, dy, math.sqrt((dx**2)+(dy**2))
 
-def find_strength(hold_to, theta, randomizer): #finds strength of a destination hold (region based on theta)
+def find_strength(hold_to, theta, randomizer=12): #finds strength of a destination hold (region based on theta)
     def swap(prio, i1, i2):
         prio[i1], prio[i2] = prio[i2], prio[i1]
         return prio
